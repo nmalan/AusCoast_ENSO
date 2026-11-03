@@ -27,7 +27,8 @@ BATHY_VAR = os.environ.get("AUSENSO_BATHY_VAR", "z")   # ETOPO 2022 ERDDAP: z (m
 
 # --- output ---
 OUT = Path(os.environ.get("AUSENSO_OUT", f"/scratch/m35/{USER}/AusCoast_ENSO"))
-FIG = Path(os.environ.get("AUSENSO_FIG", OUT / "figures"))
+# figures go in the repo (tracked by git) rather than on /scratch
+FIG = Path(os.environ.get("AUSENSO_FIG", Path(__file__).resolve().parent.parent / "figures"))
 
 # --- time ---
 YEAR_START, YEAR_END = 1982, 2024   # data read (1981 is a partial year; ia39 ends ~Dec 2024)
@@ -42,14 +43,23 @@ INDEX_BOXES = {
     "nino34": dict(lat=(-5.0, 5.0),   lon=(190.0, 240.0)),   # 170W–120W
     "dmi_w":  dict(lat=(-10.0, 10.0), lon=(50.0, 70.0)),
     "dmi_e":  dict(lat=(-10.0, 0.0),  lon=(90.0, 110.0)),
+    "trop":   dict(lat=(-20.0, 20.0), lon=(0.0, 360.0)),     # tropical-mean SST for the relative index
 }
 
 # --- ENSO / IOD classification ---
-INDEX_DETREND = True     # remove linear trend from Niño3.4/DMI anomalies (fixed baseline otherwise
-                         # biases early events low and late events high)
-ENSO_THRESH = 0.5        # |3-month running mean Niño3.4 anomaly| (°C)
-ENSO_MIN_MONTHS = 5      # consecutive overlapping 3-month seasons beyond threshold
-STRONG_THRESH = 1.5      # event peak (3-month mean) for a "strong" El Niño (°C)
+# BoM relative Niño3.4 (BoM "About climate indices", adopted Sep 2025):
+#   RN34 = S * [(N34 - N34clim) - (TropMean - TropMeanclim)],  TropMean = 20S–20N mean SST,
+#   anomalies vs 1991–2020, S scales RN34 to the variance of the traditional index,
+#   El Niño / La Niña typical when sustained monthly values > +0.8 / < -0.8 °C.
+# Here computed from OISST (BoM does not name its SST dataset on that page).
+INDEX_BASELINE = (1991, 2020)   # BoM climatology for the indices (separate from the MHW BASELINE)
+SCALE_PERIOD = (1991, 2020)     # period over which S matches variances (BoM does not state one)
+ENSO_SMOOTH = 1          # months of running mean before thresholding (1 = monthly values, as BoM)
+ENSO_THRESH = 0.8        # |RN34| threshold (°C), BoM
+ENSO_MIN_MONTHS = 5      # consecutive months beyond threshold = "sustained" (BoM gives no number — our choice)
+STRONG_THRESH = 1.5      # event peak RN34 for a "strong" El Niño (°C) — our choice, BoM defines none
+INDEX_DETREND = False    # linear detrend of DMI anomalies (RN34 is never detrended; the tropical-mean
+                         # subtraction already removes the warming trend)
 IOD_THRESH = 0.4         # SON-mean DMI threshold (°C) for flagging +/-IOD years — set to your preferred definition
 
 # --- shelf mask ---
